@@ -11,7 +11,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"teste4 tes\",\r\n    \"email\": \"test2111@teste.com\",\r\n    \"password\": \"@Senha123\",\r\n    \"password_confirmation\": \"@Senha123\",\r\n    \"tipo_pessoa\": \"pf\",\r\n    \"cpf_cnpj\": \"60.3.1.70.1.30.-8.@4\", // teste pra ver se quebra mesmo\r\n    \"telefone\": \"6.79.9.9.28.5.45\", // teste pra ver se quebra mesmo\r\n    \"inscricao_estadual\": \"\"\r\n}",
+					"raw": "{\r\n    \"name\": \"teste4 tes\",\r\n    \"email\": \"{{email}}\",\r\n    \"password\": \"{{senha}}\",\r\n    \"password_confirmation\": \"{{senha}}\",\r\n    \"tipo_pessoa\": \"pf\",\r\n    \"cpf_cnpj\": \"{{cpf}}..;/./.\", // ou {{cnpj}} // os caracteres é para verificar e ignorar\r\n    \"telefone\": \"{{telefone}}..;/./.\", // os caracteres é para verificar e ignorar\r\n    \"inscricao_estadual\": \"\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -42,7 +42,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"email\": \"test2111@teste.com\",\r\n    \"password\": \"@Senha123\"\r\n}",
+					"raw": "{\r\n    \"email\": \"{{email}}\",\r\n    \"password\": \"{{senha}}\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

@@ -46,7 +46,7 @@ class AuthController extends Controller
                         'max:20',
                         'unique:users,cpf_cnpj',
                         function ($attribute, $value, $fail) use ($input) {
-                            $value = preg_replace('/\D/', '', $value); // só números
+                            $value = preg_replace('/\D/', '', $value); 
                             if (($input['tipo_pessoa'] ?? '') === 'pf' && !$this->validarCPF($value)) {
                                 $fail('O CPF informado é inválido.');
                             }
@@ -56,33 +56,37 @@ class AuthController extends Controller
                         },
                 ],
             'telefone' => ['required', 'string', 'regex:/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/'],
-            'inscricao_estadual' => ['nullable', 'string', 'max:30'],
-        ], [
+            'inscricao_estadual' => ['nullable', 'string', 'max:30', 'regex:/^\d+$/', 'min:9'],
+        ], 
+        [
             'required' => 'O campo :attribute é obrigatório.',
             'string' => 'O campo :attribute deve ser um texto válido.',
             'max' => 'O campo :attribute deve ter no máximo :max caracteres.',
+            'min' => 'O campo :attribute deve ter no mínimo :min caracteres.',
 
-            'name.required' => 'O campo Nome Completo é obrigatório.',
-            'name.min' => 'O Nome Completo deve ter no mínimo :min caracteres.',
+            'email.email' => 'O :attribute precisa ser válido.',
+            'email.unique' => 'Este :attribute já existe cadastrado.',
 
-            'email.email' => 'O campo de e-mail precisa ser um e-mail válido.',
-            'email.unique' => 'Este e-mail já está em uso.',
+            'confirmed' => 'A :attribute não confere.',
+            'password.letters' => 'A :attribute deve conter pelo menos uma letra.',
+            'password.mixed' => 'A :attribute deve conter letras maiúsculas e minúsculas.',
+            'password.numbers' => 'A :attribute deve conter pelo menos um número.',
+            'password.symbols' => 'A :attribute deve conter pelo menos um símbolo especial.',
 
-            'password.confirmed' => 'A confirmação da senha não confere.',
-            'password.min' => 'A senha deve ter no mínimo :min caracteres.',
-            'password.letters' => 'A senha deve conter pelo menos uma letra.',
-            'password.mixed' => 'A senha deve conter pelo menos uma letra maiúscula e minúscula.',
-            'password.numbers' => 'A senha deve conter pelo menos um número.',
-            'password.symbols' => 'A senha deve conter pelo menos um símbolo especial.',
-
-            'cpf_cnpj.required' => 'O CPF ou CNPJ é obrigatório.',
-            'cpf_cnpj.unique' => 'Este CPF ou CNPJ já cadastrado.',
-
-            'tipo_pessoa.required' => 'O tipo de pessoa é obrigatório.',
-            'tipo_pessoa.in' => 'O tipo de pessoa deve ser PF ou PJ.',
-
-            'telefone.regex' => 'O telefone informado não é válido. Ex: (11) 90000-0000',
-            'inscricao_estadual.max' => 'A inscrição estadual deve ter no máximo :max caracteres.',
+            'cpf_cnpj.unique' => 'Este :attribute já existe cadastrado.',
+            'tipo_pessoa.in' => 'O :attribute deve ser PF ou PJ.',
+            'telefone.regex' => 'O :attribute informado não é válido. Ex: (11) 90000-0000',
+            'inscricao_estadual.regex' => 'O campo :attribute deve conter apenas números.',
+        ],
+        [
+            'name' => 'Nome Completo',
+            'email' => 'E-mail',
+            'password' => 'Senha',
+            'password_confirmation' => 'confirmação da Senha',
+            'cpf_cnpj' => 'CPF ou CNPJ',
+            'tipo_pessoa' => 'Tipo de Pessoa',
+            'telefone' => 'Telefone',
+            'inscricao_estadual' => 'Inscrição Estadual',
         ]);
 
         if ($validated->fails()) {
@@ -128,13 +132,17 @@ class AuthController extends Controller
             'password' => ['required' , 'string' , Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
         ], [
             'required' => 'O campo :attribute é obrigatório.',
-            'email.email' => 'O campo de e-mail precisa ser um e-mail válido.',
+            'email.email' => 'O :attribute precisa ser válido.',
             'string' => 'O campo :attribute deve ser um texto válido.',
-            'password.min' => 'A senha deve ter no mínimo :min caracteres.',
-            'password.letters' => 'A senha deve conter pelo menos uma letra.',
-            'password.mixed' => 'A senha deve conter pelo menos uma letra maiúscula e minúscula.',
-            'password.numbers' => 'A senha deve conter pelo menos um número.',
-            'password.symbols' => 'A senha deve conter pelo menos um símbolo especial.',
+            'password.min' => 'A :attribute deve ter no mínimo :min caracteres.',
+            'password.letters' => 'A :attribute deve conter pelo menos uma letra.',
+            'password.mixed' => 'A :attribute deve conter pelo menos uma letra maiúscula e minúscula.',
+            'password.numbers' => 'A :attribute deve conter pelo menos um número.',
+            'password.symbols' => 'A :attribute deve conter pelo menos um símbolo especial.',
+        ],
+        [
+            'email' => 'E-mail',
+            'password' => 'Senha',
         ]);
 
         if ($validated->fails()) {
