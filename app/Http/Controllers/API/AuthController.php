@@ -35,6 +35,18 @@ class AuthController extends Controller
         $input['cpf_cnpj'] = preg_replace('/\D/', '', $input['cpf_cnpj'] ?? '');
         $input['telefone'] = preg_replace('/\D/', '', $input['telefone'] ?? '');
 
+        $input['tipo_pessoa'] = strtolower($input['tipo_pessoa'] ?? '');
+        $atributos =  [
+            'name' => 'Nome Completo',
+            'email' => 'E-mail',
+            'password' => 'Senha',
+            'cpf_cnpj' => $input['tipo_pessoa'] === 'pj' ? 'CNPJ' : 'CPF',
+            'tipo_pessoa' => 'Tipo de Pessoa',
+            'telefone' => 'Telefone',
+            'inscricao_estadual' => 'Inscrição Estadual',
+        ];
+        $input['tipo_pessoa'] = strtolower($input['tipo_pessoa'] ?? 'pf');
+
         $validated = Validator::make($input, [
             'name' => 'required|min:8|string|max:100',
             'email' => 'required|email:rfc,dns|unique:users,email',
@@ -64,10 +76,12 @@ class AuthController extends Controller
             'max' => 'O campo :attribute deve ter no máximo :max caracteres.',
             'min' => 'O campo :attribute deve ter no mínimo :min caracteres.',
 
-            'email.email' => 'O :attribute precisa ser válido.',
+            'name.min' => 'O :attribute informado não é válido.',
+
+            'email.email' => 'O :attribute informado não é válido.',
             'email.unique' => 'Este :attribute já existe cadastrado.',
 
-            'confirmed' => 'A :attribute não confere.',
+            'confirmed' => 'A confirmação da :attribute não confere.',
             'password.letters' => 'A :attribute deve conter pelo menos uma letra.',
             'password.mixed' => 'A :attribute deve conter letras maiúsculas e minúsculas.',
             'password.numbers' => 'A :attribute deve conter pelo menos um número.',
@@ -75,19 +89,10 @@ class AuthController extends Controller
 
             'cpf_cnpj.unique' => 'Este :attribute já existe cadastrado.',
             'tipo_pessoa.in' => 'O :attribute deve ser PF ou PJ.',
-            'telefone.regex' => 'O :attribute informado não é válido. Ex: (11) 90000-0000',
+            'telefone.regex' => 'O :attribute informado não é válido.',
             'inscricao_estadual.regex' => 'O campo :attribute deve conter apenas números.',
-        ],
-        [
-            'name' => 'Nome Completo',
-            'email' => 'E-mail',
-            'password' => 'Senha',
-            'password_confirmation' => 'confirmação da Senha',
-            'cpf_cnpj' => 'CPF ou CNPJ',
-            'tipo_pessoa' => 'Tipo de Pessoa',
-            'telefone' => 'Telefone',
-            'inscricao_estadual' => 'Inscrição Estadual',
-        ]);
+        ], $atributos
+       );
 
         if ($validated->fails()) {
             return response()->json([
