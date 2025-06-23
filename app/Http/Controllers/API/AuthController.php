@@ -35,7 +35,10 @@ class AuthController extends Controller
         $input['cpf_cnpj'] = preg_replace('/\D/', '', $input['cpf_cnpj'] ?? '');
         $input['telefone'] = preg_replace('/\D/', '', $input['telefone'] ?? '');
 
+        $input['name'] = ucwords($input['name'] ?? '');
+        $input['email'] = strtolower($input['email'] ?? '');
         $input['tipo_pessoa'] = strtolower($input['tipo_pessoa'] ?? '');
+
         $atributos =  [
             'name' => 'Nome Completo',
             'email' => 'E-mail',
