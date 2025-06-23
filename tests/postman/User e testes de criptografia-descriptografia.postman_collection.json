@@ -1,0 +1,105 @@
+{
+	"info": {
+		"name": "User",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Informações usuário logado",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url_api}}/user",
+					"host": [
+						"{{base_url_api}}"
+					],
+					"path": [
+						"user"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "encriptar teste",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/produto/encriptar/teste de incripatação aqui",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"produto",
+						"encriptar",
+						"teste de incripatação aqui"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "desencriptar teste",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://api-portkboom.test/produto/desencriptar/30vfLQTFlZoXuvVMQ5ygPQyyV0K1ab_liTYUWShm9yaY0u_yB99Bu0mEQdAxM0VUX_4DrPRvzPn8bLzO5RPQ2moNPCz7-59cVQ6Fn-56zI4",
+					"protocol": "http",
+					"host": [
+						"api-portkboom",
+						"test"
+					],
+					"path": [
+						"produto",
+						"desencriptar",
+						"30vfLQTFlZoXuvVMQ5ygPQyyV0K1ab_liTYUWShm9yaY0u_yB99Bu0mEQdAxM0VUX_4DrPRvzPn8bLzO5RPQ2moNPCz7-59cVQ6Fn-56zI4"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "id",
+			"value": "1"
+		},
+		{
+			"key": "base_url",
+			"value": "https://postman-rest-api-learner.glitch.me/"
+		}
+	]
+}
