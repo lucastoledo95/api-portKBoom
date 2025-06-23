@@ -61,21 +61,27 @@ class AuthController extends Controller
             'required' => 'O campo :attribute é obrigatório.',
             'string' => 'O campo :attribute deve ser um texto válido.',
             'max' => 'O campo :attribute deve ter no máximo :max caracteres.',
-            'name.required' => 'O campo Nome é obrigatório.',
-            'name.min' => 'O Nome deve ter no mínimo :min caracteres.',
+
+            'name.required' => 'O campo Nome Completo é obrigatório.',
+            'name.min' => 'O Nome Completo deve ter no mínimo :min caracteres.',
+
             'email.email' => 'O campo de e-mail precisa ser um e-mail válido.',
             'email.unique' => 'Este e-mail já está em uso.',
+
             'password.confirmed' => 'A confirmação da senha não confere.',
             'password.min' => 'A senha deve ter no mínimo :min caracteres.',
             'password.letters' => 'A senha deve conter pelo menos uma letra.',
             'password.mixed' => 'A senha deve conter pelo menos uma letra maiúscula e minúscula.',
             'password.numbers' => 'A senha deve conter pelo menos um número.',
             'password.symbols' => 'A senha deve conter pelo menos um símbolo especial.',
+
             'cpf_cnpj.required' => 'O CPF ou CNPJ é obrigatório.',
-            'cpf_cnpj.unique' => 'Este CPF ou CNPJ já está em uso.',
+            'cpf_cnpj.unique' => 'Este CPF ou CNPJ já cadastrado.',
+
             'tipo_pessoa.required' => 'O tipo de pessoa é obrigatório.',
-            'tipo_pessoa.in' => 'O tipo de pessoa deve ser pf ou pj.',
-            'telefone.regex' => 'O telefone informado não é válido. Ex: (11) 91234-5678',
+            'tipo_pessoa.in' => 'O tipo de pessoa deve ser PF ou PJ.',
+
+            'telefone.regex' => 'O telefone informado não é válido. Ex: (11) 90000-0000',
             'inscricao_estadual.max' => 'A inscrição estadual deve ter no máximo :max caracteres.',
         ]);
 
@@ -85,11 +91,11 @@ class AuthController extends Controller
                 'errors' => $validated->errors()
             ], 422);
         }
-        $validated = $validated->validated(); // verificalçãao da validação
+        $validated = $validated->validated(); // validação
 
         try {
             // criar usuario
-            $user = User::create([
+            User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
@@ -99,10 +105,10 @@ class AuthController extends Controller
                 'inscricao_estadual' => $validated['inscricao_estadual'] ?? null,
             ]);
 
-
+            // forçar login após cadastro
             $loginRequest = new Request([
                 'email' => $validated['email'],
-                'password' => $input['password'], 
+                'password' => $input['password'],
             ]);
 
             return $this->login($loginRequest);
@@ -110,7 +116,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'ok' => false,
-                'msg' => 'Erro ao cadastrar.',
+                'msg' => 'Erro - Não foi possivel cadastrar.',
             ], 500);
         }
 
@@ -123,6 +129,7 @@ class AuthController extends Controller
         ], [
             'required' => 'O campo :attribute é obrigatório.',
             'email.email' => 'O campo de e-mail precisa ser um e-mail válido.',
+            'string' => 'O campo :attribute deve ser um texto válido.',
             'password.min' => 'A senha deve ter no mínimo :min caracteres.',
             'password.letters' => 'A senha deve conter pelo menos uma letra.',
             'password.mixed' => 'A senha deve conter pelo menos uma letra maiúscula e minúscula.',
@@ -138,19 +145,23 @@ class AuthController extends Controller
         }
         $validated = $validated->validated();
 
-        if (Auth::attempt($validated)) {
-            $user = User::where('email', $validated['email'])->firstOrFail();
+        try {
+            if (Auth::attempt($validated)) {
+                $user = User::where('email', $validated['email'])->firstOrFail();
 
-            $token = $user->createToken(
-                'api-token',
-                ['post:read'] // lembrar de fazer a verificação caso seja admin.
-            )->plainTextToken;
+                // lembrar de fazer a verificação caso seja admin.
+                $token = $user->createToken('api-token', ['post:read'])->plainTextToken;
 
-            return response()->json(['ok' => true, 'token' => $token]);
+                return response()->json(['ok' => true, 'token' => $token], 200);
+            }
+            return response()->json(['ok' => false, 'message' => 'E-mail ou senha inválidos'], 401);
 
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'msg' => 'Erro - Não foi possivel realizar login.',
+            ], 500);
         }
-
-        return response()->json(['ok' => false, 'message' => 'E-mail ou senha inválidos'], 401);
 
     }
     public function logout(Request $request)
@@ -163,12 +174,12 @@ class AuthController extends Controller
 
         $access_token = PersonalAccessToken::findToken($token);
         if (!$access_token) {
-            return response()->json(['ok' => false, 'message' => 'Token inválido'], 400);
+            return response()->json(['ok' => false, 'message' => 'Token inválido'], 401);
         }
 
         // dd($access_token);
         $access_token->delete();
-        return response()->json(['ok' => true, 'message' => 'Saiu do login'], 400);
+        return response()->json(['ok' => true, 'message' => 'Saiu do login'], 200);
 
     }
     /**

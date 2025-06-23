@@ -20,9 +20,10 @@ class ClearInactiveTokens
     {
         try {
             $chaveCache = 'ultima_execucao_limpeza_tokens';
-            $timeout = 60; // tempo de expirar token
-            $cacheClearToken = 5; // a cada minutos apos primeiro acesso a funcao, salva no cache e fica executando conforme chama a funcao
-
+            $timeout = (int) env('EXPIRAR_TOKEN',60); 
+            $cacheClearToken = (int) env('CACHE_CLEAR_TOKEN',5);  // time para verificar, assim não derruba desempenho em grande escala
+            // a cada acesso na função que chama no grupo da api, salva no cache e verifica clear token
+   
             if (
                 !Cache::has($chaveCache) ||
                 Carbon::parse(Cache::get($chaveCache))
