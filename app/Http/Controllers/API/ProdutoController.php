@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Services\Enc;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller as Controller;
 
@@ -50,21 +49,5 @@ class ProdutoController extends Controller
     {
         //
     }
-
-    public function encriptado(string $id, Enc $enc)
-    {
-        $idencriptado =  $enc->encriptar($id);
-
-        return response()->json(['id_encriptado' => $idencriptado]);
-    }
-
-
-    public function desencriptado(string $id, Enc $enc)
-    {
-        $iddesencriptado =  $enc->desencriptar($id);
-
-        return response()->json(['id_desencriptado' => $iddesencriptado]);
-    }
-
 
 }

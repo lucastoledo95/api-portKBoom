@@ -5,16 +5,18 @@ namespace App\Http\Controllers\API;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Http\Controllers\Controller as Controller;
 use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use App\Http\Controllers\Controller as Controller;
+use App\Traits\EncTrait;
 
 use function Pest\Laravel\json;
 
 class AuthController extends Controller
 {
+    use EncTrait;
     /**
      * Exibe uma lista dos recursos.
      */
@@ -50,7 +52,8 @@ class AuthController extends Controller
         ];
         $input['tipo_pessoa'] = strtolower($input['tipo_pessoa'] ?? 'pf');
 
-        $validated = Validator::make($input, [
+        $validated = Validator::make($input,
+        [
             'name' => 'required|min:8|string|max:100',
             'email' => 'required|email:rfc,dns|unique:users,email',
             'password' => ['required' , 'string' , 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
@@ -61,7 +64,7 @@ class AuthController extends Controller
                         'max:20',
                         'unique:users,cpf_cnpj',
                         function ($attribute, $value, $fail) use ($input) {
-                            $value = preg_replace('/\D/', '', $value); 
+                            $value = preg_replace('/\D/', '', $value);
                             if (($input['tipo_pessoa'] ?? '') === 'pf' && !$this->validarCPF($value)) {
                                 $fail('O CPF informado é inválido.');
                             }
@@ -72,8 +75,8 @@ class AuthController extends Controller
                 ],
             'telefone' => ['required', 'string', 'regex:/^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/'],
             'inscricao_estadual' => ['nullable', 'string', 'max:30', 'regex:/^\d+$/', 'min:9'],
-        ], 
-        [
+        ],
+            [
             'required' => 'O campo :attribute é obrigatório.',
             'string' => 'O campo :attribute deve ser um texto válido.',
             'max' => 'O campo :attribute deve ter no máximo :max caracteres.',
@@ -94,8 +97,9 @@ class AuthController extends Controller
             'tipo_pessoa.in' => 'O :attribute deve ser PF ou PJ.',
             'telefone.regex' => 'O :attribute informado não é válido.',
             'inscricao_estadual.regex' => 'O campo :attribute deve conter apenas números.',
-        ], $atributos
-       );
+        ],
+            $atributos
+        );
 
         if ($validated->fails()) {
             return response()->json([
@@ -126,19 +130,20 @@ class AuthController extends Controller
             return $this->login($loginRequest);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'ok' => false,
-                'msg' => 'Erro - Não foi possivel cadastrar.',
+            return response()->json(['ok' => false,'message' => 'Erro - Não foi possivel cadastrar.',
             ], 500);
         }
 
     }
     public function login(Request $request)
     {
-        $validated = Validator::make($request->all(), [
+        $validated = Validator::make(
+            $request->all(),
+            [
             'email' => 'required|email:rfc,dns',
             'password' => ['required' , 'string' , Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
-        ], [
+        ],
+            [
             'required' => 'O campo :attribute é obrigatório.',
             'email.email' => 'O :attribute precisa ser válido.',
             'string' => 'O campo :attribute deve ser um texto válido.',
@@ -151,7 +156,8 @@ class AuthController extends Controller
         [
             'email' => 'E-mail',
             'password' => 'Senha',
-        ]);
+            ]
+        );
 
         if ($validated->fails()) {
             return response()->json([
@@ -168,35 +174,38 @@ class AuthController extends Controller
                 // lembrar de fazer a verificação caso seja admin.
                 $token = $user->createToken('api-token', ['post:read'])->plainTextToken;
 
+                $token = $this->encriptado($token);
+
                 return response()->json(['ok' => true, 'token' => $token], 200);
             }
             return response()->json(['ok' => false, 'message' => 'E-mail ou senha inválidos'], 401);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'ok' => false,
-                'msg' => 'Erro - Não foi possivel realizar login.',
-            ], 500);
+            return response()->json(['ok' => false,'message' => 'Erro - Não foi possivel realizar login.',], 500);
         }
 
     }
     public function logout(Request $request)
     {
-        $token = $request->bearerToken();
+        try {
+            $findTokenLogin = $request->bearerToken();
 
-        if (!$token) {
-            return response()->json(['ok' => false, 'message' => 'Token não informado'], 400);
-        }
+            if (!$findTokenLogin) {
+                return response()->json(['ok' => false, 'message' => 'Token não informado'], 400);
+            }
 
-        $access_token = PersonalAccessToken::findToken($token);
-        if (!$access_token) {
-            return response()->json(['ok' => false, 'message' => 'Token inválido'], 401);
-        }
+            $access_token = PersonalAccessToken::findToken($findTokenLogin);
+            if (!$access_token) {
+                return response()->json(['ok' => false, 'message' => 'Token inválido ou já expirado'], 401);
+            }
 
-        // dd($access_token);
-        $access_token->delete();
-        return response()->json(['ok' => true, 'message' => 'Saiu do login'], 200);
+            // dd($access_token);
+            $access_token->delete();
+            return response()->json(['ok' => true, 'message' => 'Logout realizado com sucesso. '], 200);
 
+         } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => 'Erro - Não foi possivel realizar logout.'], 500);
+         }
     }
     /**
      * Exibe o recurso especificado.
