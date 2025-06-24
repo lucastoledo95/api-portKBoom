@@ -11,7 +11,8 @@ Route::prefix('auth/clientes')
         Route::post('cadastro', 'register')->name('cadastro')->middleware('throttle:6,1');
         Route::post('login', 'login')->name('login')->middleware('throttle:5,1');
         Route::post('sair', 'logout')->name('sair')->middleware(['throttle:5,1', 'auth:sanctum']);
-        // redefinir senha e email
+        // redefinir senha
+        // minha conta
     });
 
 

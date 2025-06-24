@@ -30,46 +30,6 @@
 				}
 			},
 			"response": []
-		},
-		{
-			"name": "encriptar teste",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/produto/encriptar/teste de incripatação aqui",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"produto",
-						"encriptar",
-						"teste de incripatação aqui"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "desencriptar teste",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://api-portkboom.test/produto/desencriptar/30vfLQTFlZoXuvVMQ5ygPQyyV0K1ab_liTYUWShm9yaY0u_yB99Bu0mEQdAxM0VUX_4DrPRvzPn8bLzO5RPQ2moNPCz7-59cVQ6Fn-56zI4",
-					"protocol": "http",
-					"host": [
-						"api-portkboom",
-						"test"
-					],
-					"path": [
-						"produto",
-						"desencriptar",
-						"30vfLQTFlZoXuvVMQ5ygPQyyV0K1ab_liTYUWShm9yaY0u_yB99Bu0mEQdAxM0VUX_4DrPRvzPn8bLzO5RPQ2moNPCz7-59cVQ6Fn-56zI4"
-					]
-				}
-			},
-			"response": []
 		}
 	],
 	"event": [

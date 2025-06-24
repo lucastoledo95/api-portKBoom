@@ -11,7 +11,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"tete asd s\",\r\n    \"email\": \"{{email}}\",\r\n    \"password\": \"{{senha}}\",\r\n    \"password_confirmation\": \"{{senha}}\",\r\n    \"tipo_pessoa\": \"{{pessoa}}\",\r\n    \"cpf_cnpj\": \"{{cpf}}\", // ou {{cnpj}}\r\n    \"telefone\": \"{{telefone}}\", \r\n    \"inscricao_estadual\": \"\"\r\n}",
+					"raw": "{\r\n    \"name\": \"Emrpesa TESTE EEmpresinha\",\r\n    \"email\": \"{{email}}\",\r\n    \"password\": \"{{senha}}\",\r\n    \"password_confirmation\": \"{{senha}}\",\r\n    \"tipo_pessoa\": \"{{pessoa}}\", //{{pessoa}}\r\n    \"cpf_cnpj\": \"{{cnpj}}\", // {{cnpj}} {{cpf}}\r\n    \"telefone\": \"{{telefone}}\", \r\n    \"inscricao_estadual\": \"\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -42,7 +42,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"email\": \"{{email}}\",\r\n    \"password\": \"{{senha}}\"\r\n}",
+					"raw": "{\r\n    \"login\": \"{{cnpj}}\", // {{cpf}} {{email}} {{cnpj}} \r\n    \"password\": \"{{senha}}\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

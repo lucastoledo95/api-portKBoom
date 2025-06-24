@@ -24,26 +24,21 @@ class ClearInactiveTokens
             $cacheClearToken = (int) env('CACHE_CLEAR_TOKEN',5);  // time para verificar, assim não derruba desempenho em grande escala
             // a cada acesso na função que chama no grupo da api, salva no cache e verifica clear token
    
-            if (
-                !Cache::has($chaveCache) ||
-                Carbon::parse(Cache::get($chaveCache))
-                    ->addMinutes($cacheClearToken)
-                    ->isPast()
-            ) {
-                PersonalAccessToken::query()
-                    ->where(function ($query) use ($timeout) {
-                        $query->where(function ($q) use ($timeout) {
-                            $q->whereNull('last_used_at')
-                            ->where('created_at', '<', now()->subMinutes($timeout));
-                        })->orWhere(function ($q) use ($timeout) {
-                            $q->whereNotNull('last_used_at')
-                            ->where('last_used_at', '<', now()->subMinutes($timeout));
-                        });
-                    })
-                    ->delete();
+            if (!Cache::has($chaveCache) || 
+            Carbon::parse(Cache::get($chaveCache))->addMinutes($cacheClearToken)->isPast()) 
+            {
+                PersonalAccessToken::query()->where(function ($query) use ($timeout) {
+                    $query->where(function ($q) use ($timeout) {
+                        $q->whereNull('last_used_at')
+                        ->where('created_at', '<', now()->subMinutes($timeout));
+                    })->orWhere(function ($q) use ($timeout) {
+                        $q->whereNotNull('last_used_at')
+                        ->where('last_used_at', '<', now()->subMinutes($timeout));
+                    });
+                })->delete();
 
                 Cache::put($chaveCache, now(), now()->addMinutes($cacheClearToken));
-                }
+            }
                 
         } catch (\Throwable $e) {
             if (app()->environment('local')) {

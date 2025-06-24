@@ -37,7 +37,7 @@ class AuthController extends Controller
         $input['cpf_cnpj'] = preg_replace('/\D/', '', $input['cpf_cnpj'] ?? '');
         $input['telefone'] = preg_replace('/\D/', '', $input['telefone'] ?? '');
 
-        $input['name'] = ucwords($input['name'] ?? '');
+        $input['name'] = strtoupper($input['name'] ?? '');
         $input['email'] = strtolower($input['email'] ?? '');
         $input['tipo_pessoa'] = strtolower($input['tipo_pessoa'] ?? '');
 
@@ -53,7 +53,7 @@ class AuthController extends Controller
         $input['tipo_pessoa'] = strtolower($input['tipo_pessoa'] ?? 'pf');
 
         $validated = Validator::make($input,
-        [
+            [
             'name' => 'required|min:8|string|max:100',
             'email' => 'required|email:rfc,dns|unique:users,email',
             'password' => ['required' , 'string' , 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
@@ -123,7 +123,7 @@ class AuthController extends Controller
 
             // forçar login após cadastro
             $loginRequest = new Request([
-                'email' => $validated['email'],
+                'login' => $validated['email'],
                 'password' => $input['password'],
             ]);
 
@@ -137,53 +137,67 @@ class AuthController extends Controller
     }
     public function login(Request $request)
     {
-        $validated = Validator::make(
-            $request->all(),
-            [
-            'email' => 'required|email:rfc,dns',
-            'password' => ['required' , 'string' , Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
-        ],
-            [
+        $input = $request->all();
+
+        $validator = Validator::make($input, [
+            'login' => [
+                'required','string',function ($attribute, $value, $fail) {
+                    $emailValido = filter_var($value, FILTER_VALIDATE_EMAIL);
+                    $cpfValido = strlen(preg_replace('/\D/', '', $value)) === 11;
+                    $cnpjValido = strlen(preg_replace('/\D/', '', $value)) === 14;
+
+                    if (!$emailValido && !$cpfValido && !$cnpjValido) {
+                        $fail('Informe um e-mail, CPF ou CNPJ válido.');
+                    }
+                }
+            ],
+            'password' => ['required','string', Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
+        ], [
             'required' => 'O campo :attribute é obrigatório.',
-            'email.email' => 'O :attribute precisa ser válido.',
             'string' => 'O campo :attribute deve ser um texto válido.',
             'password.min' => 'A :attribute deve ter no mínimo :min caracteres.',
             'password.letters' => 'A :attribute deve conter pelo menos uma letra.',
             'password.mixed' => 'A :attribute deve conter pelo menos uma letra maiúscula e minúscula.',
             'password.numbers' => 'A :attribute deve conter pelo menos um número.',
             'password.symbols' => 'A :attribute deve conter pelo menos um símbolo especial.',
-        ],
-        [
-            'email' => 'E-mail',
+        ], [
+            'login' => 'E-mail, CPF ou CNPJ',
             'password' => 'Senha',
-            ]
-        );
+        ]);
 
-        if ($validated->fails()) {
-            return response()->json([
-                'ok' => false,
-                'errors' => $validated->errors()
-            ], 422);
+        if ($validator->fails()) {
+            return response()->json(['ok' => false, 'errors' => $validator->errors()], 422);
         }
-        $validated = $validated->validated();
 
         try {
-            if (Auth::attempt($validated)) {
-                $user = User::where('email', $validated['email'])->firstOrFail();
+            $login = $input['login'];
+            $password = $input['password'];
+            $apenasNumeros = preg_replace('/\D/', '', $login);
 
-                // lembrar de fazer a verificação caso seja admin.
+            $credentials = ['password' => $password];
+            if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+                $credentials['email'] = $login;
+            } elseif (strlen($apenasNumeros) === 11 || strlen($apenasNumeros) === 14) {
+                $credentials['cpf_cnpj'] = $apenasNumeros;
+            }
+
+            if (Auth::attempt($credentials)) {
+                /** @var \App\Models\User $user */
+                $user = Auth::user();
+                //dd($user);
+
                 $token = $user->createToken('api-token', ['post:read'])->plainTextToken;
 
                 $token = $this->encriptado($token);
 
                 return response()->json(['ok' => true, 'token' => $token], 200);
             }
+
             return response()->json(['ok' => false, 'message' => 'E-mail ou senha inválidos'], 401);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(['ok' => false,'message' => 'Erro - Não foi possivel realizar login.',], 500);
         }
-
     }
     public function logout(Request $request)
     {
@@ -203,9 +217,9 @@ class AuthController extends Controller
             $access_token->delete();
             return response()->json(['ok' => true, 'message' => 'Logout realizado com sucesso. '], 200);
 
-         } catch (\Throwable $e) {
+        } catch (\Throwable $e) {
             return response()->json(['ok' => false, 'message' => 'Erro - Não foi possivel realizar logout.'], 500);
-         }
+        }
     }
     /**
      * Exibe o recurso especificado.
@@ -236,39 +250,41 @@ class AuthController extends Controller
     {
         $cnpj = preg_replace('/\D/', '', $cnpj);
 
-        if (strlen($cnpj) != 14 || preg_match('/(\d)\1{13}/', $cnpj)) {
+        if (strlen($cnpj) !== 14 || preg_match('/(\d)\1{13}/', $cnpj)) {
             return false;
         }
 
         $multiplicadores1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-        $multiplicadores2 = [6] + $multiplicadores1;
+        $multiplicadores2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
-        for ($i = 0, $soma1 = 0; $i < 12; $i++) {
+        $soma1 = 0;
+        for ($i = 0; $i < 12; $i++) {
             $soma1 += $cnpj[$i] * $multiplicadores1[$i];
         }
 
         $resto1 = $soma1 % 11;
         $digito1 = $resto1 < 2 ? 0 : 11 - $resto1;
 
-        if ($cnpj[12] != $digito1) {
+        if ((int)$cnpj[12] !== $digito1) {
             return false;
         }
 
-        for ($i = 0, $soma2 = 0; $i < 13; $i++) {
+        $soma2 = 0;
+        for ($i = 0; $i < 13; $i++) {
             $soma2 += $cnpj[$i] * $multiplicadores2[$i];
         }
 
         $resto2 = $soma2 % 11;
         $digito2 = $resto2 < 2 ? 0 : 11 - $resto2;
 
-        return $cnpj[13] == $digito2;
+        return (int)$cnpj[13] === $digito2;
     }
 
     public function validarCPF(string $cpf): bool
     {
         $cpf = preg_replace('/\D/', '', $cpf);
 
-        if (strlen($cpf) != 11 || preg_match('/(\d)\1{10}/', $cpf)) {
+        if (strlen($cpf) !== 11 || preg_match('/(\d)\1{10}/', $cpf)) {
             return false;
         }
 
@@ -278,12 +294,14 @@ class AuthController extends Controller
                 $d += $cpf[$c] * (($t + 1) - $c);
             }
             $d = ((10 * $d) % 11) % 10;
-            if ($cpf[$c] != $d) {
+
+            if (!isset($cpf[$t]) || (int)$cpf[$t] !== $d) {
                 return false;
             }
         }
 
         return true;
     }
+
 
 }
