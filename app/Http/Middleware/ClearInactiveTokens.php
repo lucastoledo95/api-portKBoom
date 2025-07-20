@@ -12,34 +12,29 @@ use Symfony\Component\HttpFoundation\Response;
 class ClearInactiveTokens
 {
     /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * Configurações de expiração por tipo de token
      */
+    private const TOKEN_EXPIRATION = [
+        'access-token' => 15,      // 15 minutos
+        'refresh-token' => 10080,  // 7 dias // pensando em colcoar um dia
+        //'api-token' => 60,         // 1 hora // não tem mais
+    ];
+
     public function handle(Request $request, Closure $next): Response
     {
         try {
             $chaveCache = 'ultima_execucao_limpeza_tokens';
-            $timeout = (int) env('EXPIRAR_TOKEN',60); 
-            $cacheClearToken = (int) env('CACHE_CLEAR_TOKEN',5);  // time para verificar, assim não derruba desempenho em grande escala
-            // a cada acesso na função que chama no grupo da api, salva no cache e verifica clear token
-   
-            if (!Cache::has($chaveCache) || 
-            Carbon::parse(Cache::get($chaveCache))->addMinutes($cacheClearToken)->isPast()) 
-            {
-                PersonalAccessToken::query()->where(function ($query) use ($timeout) {
-                    $query->where(function ($q) use ($timeout) {
-                        $q->whereNull('last_used_at')
-                        ->where('created_at', '<', now()->subMinutes($timeout));
-                    })->orWhere(function ($q) use ($timeout) {
-                        $q->whereNotNull('last_used_at')
-                        ->where('last_used_at', '<', now()->subMinutes($timeout));
-                    });
-                })->delete();
+            $cacheClearToken = (int) env('CACHE_CLEAR_TOKEN', 15);
+            //dd(Cache::get($chaveCache));
+            if (!Cache::has($chaveCache) ||
+                Carbon::parse(Cache::get($chaveCache))->addMinutes($cacheClearToken)->isPast()) {
+                foreach (self::TOKEN_EXPIRATION as $tokenName => $timeoutMinutes) {
+                    $this->clearExpiredTokens($tokenName, $timeoutMinutes);
+                }
 
                 Cache::put($chaveCache, now(), now()->addMinutes($cacheClearToken));
             }
-                
+
         } catch (\Throwable $e) {
             if (app()->environment('local')) {
                 throw $e;
@@ -51,6 +46,25 @@ class ClearInactiveTokens
             ], 500);
         }
 
-                return $next($request);
+        return $next($request);
+    }
+
+    /**
+     * Limpa tokens expirados de um tipo específico
+     */
+    private function clearExpiredTokens(string $tokenName, int $timeoutMinutes): void
+    {
+        PersonalAccessToken::query()
+            ->where('name', $tokenName)
+            ->where(function ($query) use ($timeoutMinutes) {
+                $query->where(function ($q) use ($timeoutMinutes) {
+                    $q->whereNull('last_used_at')
+                      ->where('created_at', '<', now()->subMinutes($timeoutMinutes));
+                })->orWhere(function ($q) use ($timeoutMinutes) {
+                    $q->whereNotNull('last_used_at')
+                      ->where('last_used_at', '<', now()->subMinutes($timeoutMinutes));
+                });
+            })
+            ->delete();
     }
 }

@@ -5,6 +5,7 @@ use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Console\Scheduling\Schedule;
 use App\Http\Middleware\ClearInactiveTokens;
 use App\Http\Middleware\EncDescriptograrToken;
+use App\Http\Middleware\ForceHttps;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
@@ -17,9 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prependToGroup('api', [
-            ForceJsonResponse::class, 
-            ClearInactiveTokens::class, 
+            ForceJsonResponse::class,
+            ClearInactiveTokens::class,
             EncDescriptograrToken::class,
+            ForceHttps::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

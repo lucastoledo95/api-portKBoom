@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\User;
+use App\Traits\EncTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use App\Http\Controllers\Controller as Controller;
-use App\Traits\EncTrait;
 
 use function Pest\Laravel\json;
 
@@ -52,7 +53,8 @@ class AuthController extends Controller
         ];
         $input['tipo_pessoa'] = strtolower($input['tipo_pessoa'] ?? 'pf');
 
-        $validated = Validator::make($input,
+        $validated = Validator::make(
+            $input,
             [
             'name' => 'required|min:8|string|max:100',
             'email' => 'required|email:rfc,dns|unique:users,email',
@@ -137,8 +139,15 @@ class AuthController extends Controller
     }
     public function login(Request $request)
     {
-        $input = $request->all();
 
+        /*    $recapchaTokenVerificado = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => env('RECAPTCHA_SECRET_KEY'),
+                'response' => $request->recaptcha_token,
+            ]);
+            $recapchaTokenVerificado = $recapchaTokenVerificado->json();
+        // preciso implementar o captcha ainda */
+
+        $input = $request->all();
         $validator = Validator::make($input, [
             'login' => [
                 'required','string',function ($attribute, $value, $fail) {
@@ -181,16 +190,38 @@ class AuthController extends Controller
                 $credentials['cpf_cnpj'] = $apenasNumeros;
             }
 
+            /*  if (!($recapchaTokenVerificado['success'] ?? false)) { // implementar ainda
+                  response()->json(['ok' => false, 'message' => 'Falha na verificação reCAPTCHA.'], 422);
+              }
+            */
+
+
             if (Auth::attempt($credentials)) {
                 /** @var \App\Models\User $user */
                 $user = Auth::user();
                 //dd($user);
 
-                $token = $user->createToken('api-token', ['post:read'])->plainTextToken;
+                //, remove todos os tokens devido ao novo login
+                $user->tokens()->delete();
 
-                $token = $this->encriptado($token);
+                $accessToken = $user->createToken('access-token', ['post:read'], now()->addMinutes(15))->plainTextToken;
+                $refreshToken = $user->createToken('refresh-token', ['refresh'], now()->addDays(7))->plainTextToken;
 
-                return response()->json(['ok' => true, 'token' => $token], 200);
+                return response()->json([
+                    'ok' => true,
+                    'access_token' => $this->encriptado($accessToken),
+                    'expires_in' => 15 * 60, // 15minutos, expira token
+                ])->cookie(
+                    'refresh_token',
+                    $this->encriptado($refreshToken),
+                    7 * 24 * 60, // 7 dias, pensando em colocar 1 dia.
+                    '/', // path
+                    null, // domínio
+                    true, // Secure , em https... - necessario devido a questão de envio de cookies
+                    true,  // HttpOnly
+                    false, // raw
+                    'None'  // same site // necessario para dominios diferentes
+                );
             }
 
             return response()->json(['ok' => false, 'message' => 'E-mail ou senha inválidos'], 401);
@@ -199,26 +230,101 @@ class AuthController extends Controller
             return response()->json(['ok' => false,'message' => 'Erro - Não foi possivel realizar login.',], 500);
         }
     }
+
+    public function refreshToken(Request $request)
+    {
+        $refreshToken = $request->cookie('refresh_token');
+
+        try {
+            $decryptedToken = $this->desencriptado($refreshToken);
+
+            // Valida o refresh token
+            $token = PersonalAccessToken::findToken($decryptedToken);
+
+            if (!$token || !$token->can('refresh')) {
+                return response()->json(['ok' => false, 'message' => 'Refresh token inválido'], 401);
+            }
+
+            $user = $token->tokenable;
+            $user->tokens()->where('name', 'access-token')->delete();
+            // Gera novo access token
+            $newAccessToken = $user->createToken('access-token', ['post:read'], now()->addMinutes(15))->plainTextToken;
+
+            return response()->json([
+                'ok' => true,
+               'access_token' => $this->encriptado($newAccessToken),
+                'expires_in' => 15 * 60
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => 'Refresh token inválido'], 401);
+        }
+    }
+
     public function logout(Request $request)
     {
         try {
-            $findTokenLogin = $request->bearerToken();
+            $user = $request->user();
+            $refreshToken = $request->cookie('refresh_token');
+            $decryptedToken = $this->desencriptado($refreshToken);
 
-            if (!$findTokenLogin) {
-                return response()->json(['ok' => false, 'message' => 'Token não informado'], 400);
+            if (!$refreshToken && !$user) {
+                return response()->json(['ok' => false, 'message' => 'Nenhuma sessão ativa encontrada'], 401);
             }
 
-            $access_token = PersonalAccessToken::findToken($findTokenLogin);
-            if (!$access_token) {
-                return response()->json(['ok' => false, 'message' => 'Token inválido ou já expirado'], 401);
+            // Se usuário autenticado, remove todos os tokens dele
+            if ($user) {
+                $user->tokens()->delete();
             }
 
-            // dd($access_token);
-            $access_token->delete();
-            return response()->json(['ok' => true, 'message' => 'Logout realizado com sucesso. '], 200);
+            // Se tiver refresh token, valida e remove
+            if ($refreshToken) {
+                try {
+
+                    $token = PersonalAccessToken::findToken($decryptedToken);
+
+                    if ($token) {
+                        // Remove o token específico
+                        $token->delete();
+
+                        // e limpa tokens inativos
+                        if (!$user && $token->tokenable) {
+                            $token->tokenable->tokens()->delete();
+                        }
+                    }
+                } catch (\Exception $e) {
+                    return response()->json(['ok' => false, 'message' => 'Não encontrado'], 401);
+                }
+            }
+
+            // remove o cookie
+            return response()->json([
+                'ok' => true,
+                'message' => 'Logout realizado com sucesso'
+            ], 200)->cookie(
+                'refresh_token',
+                '',
+                -1,
+                null,
+                null,
+                true,
+                true
+            );
 
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'message' => 'Erro - Não foi possivel realizar logout.'], 500);
+            // mesmo com erro remove o cookie para logout
+            return response()->json([
+                'ok' => false,
+                'message' => 'Erro ao realizar logout, sessão foi encerrada'
+            ], 500)->cookie(
+                'refresh_token',
+                '',
+                -1,
+                null,
+                null,
+                true,
+                true
+            );
         }
     }
     /**
